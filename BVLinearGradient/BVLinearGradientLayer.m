@@ -64,7 +64,7 @@
 
     UIGraphicsEndImageContext();
 }
-    
+
 - (void)setUseAngle:(BOOL)useAngle
 {
     _useAngle = useAngle;
@@ -79,7 +79,7 @@
 
 - (void)setAngle:(CGFloat)angle
 {
-    _angle = angle;
+    _angle = angle - (floor(angle / 360) * 360);
     [self setNeedsDisplay];
 }
 
@@ -87,10 +87,10 @@
 {
     CGFloat angleRad = (angle - 90) * (M_PI / 180);
     CGFloat length = sqrt(2);
-    
+
     return CGSizeMake(cos(angleRad) * length, sin(angleRad) * length);
 }
-    
+
 - (void)drawInContext:(CGContextRef)ctx
 {
     [super drawInContext:ctx];
@@ -129,19 +129,48 @@
     free(locations);
 
     CGPoint start = self.startPoint, end = self.endPoint;
-    
+    CGPoint startPx;
+    CGPoint endPx;
+
     if (_useAngle)
     {
-        CGSize size = [self calculateGradientLocationWithAngle:_angle];
-        start.x = _angleCenter.x - size.width / 2;
-        start.y = _angleCenter.y - size.height / 2;
-        end.x = _angleCenter.x + size.width / 2;
-        end.y = _angleCenter.y + size.height / 2;
+      if (_angle >= 0 && _angle <= 90) {
+        CGFloat degree = (_angle) * M_PI / 180;
+        CGFloat koef = (size.width * _angleCenter.x - size.height * _angleCenter.y * sin(degree) / cos(degree)) * cos(degree);
+        CGFloat dx = koef * cos(degree);
+        CGFloat dy = koef * sin(degree);
+        startPx = CGPointMake(dx, size.height + dy);
+        endPx = CGPointMake(size.width - dx, -dy);
+      } else if (_angle > 90  && _angle <= 180) {
+        CGFloat degree = (90 - (_angle - 90)) * M_PI / 180;
+        CGFloat koef = (size.width * _angleCenter.x - size.height * _angleCenter.y * sin(degree) / cos(degree)) * cos(degree);
+        CGFloat dx = koef * cos(degree);
+        CGFloat dy = koef * sin(degree);
+        startPx = CGPointMake(dx, -dy);
+        endPx = CGPointMake(size.width - dx, size.height + dy);
+      } else if (_angle > 180 && _angle <= 270) {
+        CGFloat degree = (_angle - 180) * M_PI / 180;
+        CGFloat koef = (size.width * _angleCenter.x - size.height * _angleCenter.y * sin(degree) / cos(degree)) * cos(degree);
+        CGFloat dx = koef * cos(degree);
+        CGFloat dy = koef * sin(degree);
+        startPx = CGPointMake(size.width - dx, -dy);
+        endPx = CGPointMake(dx, size.height + dy);
+      } else if (_angle > 270 && _angle <= 360) {
+        CGFloat degree = (180 - (_angle - 180)) * M_PI / 180;
+        CGFloat koef = (size.width * _angleCenter.x - size.height * _angleCenter.y * sin(degree) / cos(degree)) * cos(degree);
+        CGFloat dx = koef * cos(degree);
+        CGFloat dy = koef * sin(degree);
+        startPx = CGPointMake(size.width - dx, size.height + dy);
+        endPx = CGPointMake(dx, -dy);
+      }
+    } else {
+      startPx = CGPointMake(start.x * size.width, start.y * size.height);
+      endPx = CGPointMake(end.x * size.width, end.y * size.height);
     }
-    
+
     CGContextDrawLinearGradient(ctx, gradient,
-                                CGPointMake(start.x * size.width, start.y * size.height),
-                                CGPointMake(end.x * size.width, end.y * size.height),
+                                startPx,
+                                endPx,
                                 kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
     CGGradientRelease(gradient);
     CGColorSpaceRelease(colorSpace);

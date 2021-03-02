@@ -75,7 +75,7 @@ public class LinearGradientView extends View {
     }
 
     public void setAngle(float angle) {
-        mAngle = angle;
+        mAngle = (float) (angle - (Math.floor(angle / 360) * 360));
         drawGradient();
     }
 
@@ -112,26 +112,46 @@ public class LinearGradientView extends View {
         if (mColors == null || (mLocations != null && mColors.length != mLocations.length))
             return;
 
-        float[] startPos = mStartPos;
-        float[] endPos = mEndPos;
+        float[] startPos = new float[]{mStartPos[0] * mSize[0], mStartPos[1] * mSize[1]};
+        float[] endPos = new float[]{mEndPos[0] * mSize[0], mEndPos[1] * mSize[1]};
 
         if (mUseAngle && mAngleCenter != null) {
-            float[] angleSize = calculateGradientLocationWithAngle(mAngle);
-            startPos = new float[]{
-                    mAngleCenter[0] - angleSize[0] / 2.0f,
-                    mAngleCenter[1] - angleSize[1] / 2.0f
-            };
-            endPos = new float[]{
-                    mAngleCenter[0] + angleSize[0] / 2.0f,
-                    mAngleCenter[1] + angleSize[1] / 2.0f
-            };
+            if (mAngle >= 0 && mAngle <= 90) {
+                double degree = (mAngle) * Math.PI / 180;
+                double koef = (mSize[0] * mAngleCenter[0] - mSize[1] * mAngleCenter[1] * Math.sin(degree) / Math.cos(degree)) * Math.cos(degree);
+                double dx = koef * Math.cos(degree);
+                double dy = koef * Math.sin(degree);
+                startPos = new float[]{(float) dx, (float) (mSize[1] + dy)};
+                endPos = new float[]{(float) (mSize[0] - dx), (float) -dy};
+            } else if (mAngle > 90  && mAngle <= 180) {
+                double degree = (90 - (mAngle - 90)) * Math.PI / 180;
+                double koef = (mSize[0] * mAngleCenter[0] - mSize[1] * mAngleCenter[1] * Math.sin(degree) / Math.cos(degree)) * Math.cos(degree);
+                double dx = koef * Math.cos(degree);
+                double dy = koef * Math.sin(degree);
+                startPos = new float[]{(float) dx, (float) -dy};
+                endPos = new float[]{(float) (mSize[0] - dx), (float) (mSize[1] + dy)};
+            } else if (mAngle > 180 && mAngle <= 270) {
+                double degree = (mAngle - 180) * Math.PI / 180;
+                double koef = (mSize[0] * mAngleCenter[0] - mSize[1] * mAngleCenter[1] * Math.sin(degree) / Math.cos(degree)) * Math.cos(degree);
+                double dx = koef * Math.cos(degree);
+                double dy = koef * Math.sin(degree);
+                startPos = new float[]{(float) (mSize[0] - dx), (float) -dy};
+                endPos = new float[]{(float) dx, (float) (mSize[1] + dy)};
+            } else if (mAngle > 270 && mAngle <= 360) {
+                double degree = (180 - (mAngle - 180)) * Math.PI / 180;
+                double koef = (mSize[0] * mAngleCenter[0] - mSize[1] * mAngleCenter[1] * Math.sin(degree) / Math.cos(degree)) * Math.cos(degree);
+                double dx = koef * Math.cos(degree);
+                double dy = koef * Math.sin(degree);
+                startPos = new float[]{(float) (mSize[0] - dx), (float) (mSize[1] + dy)};
+                endPos = new float[]{(float) dx, (float) -dy};
+            }
         }
 
         mShader = new LinearGradient(
-                startPos[0] * mSize[0],
-                startPos[1] * mSize[1],
-                endPos[0] * mSize[0],
-                endPos[1] * mSize[1],
+                startPos[0],
+                startPos[1],
+                endPos[0],
+                endPos[1],
             mColors,
             mLocations,
             Shader.TileMode.CLAMP);
